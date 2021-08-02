@@ -33,27 +33,34 @@ export default class ConsoleRunner {
         return requestUrl.href;
     }
 
-    makeGetRequest(baseUrl, endpoint, parameters, callback) {
+    async makeGetRequest(baseUrl, endpoint, parameters) {
         const url = this.buildUrl(baseUrl, endpoint, parameters);
 
-        request.get(url, (err, response, body) => {
-            if (err) {
-                console.log(err);
-            } else if (response.statusCode !== 200) {
-                console.log(response.statusCode);
-            } else {
-                callback(body);
-            }
-        });
+        return new Promise(function(resolve, reject){
+            request.get(url, (err, response, body) => {
+                if (err) {
+                    console.log(err);
+
+                } else if (response.statusCode !==200) {
+                    console.log(response.statusCode)
+                } else {
+                    resolve(body)
+                }
+            })
+        })
     }
 
-    getLocationForPostCode(postcode, callback) {
-        this.makeGetRequest(POSTCODES_BASE_URL, `postcodes/${postcode}`, [], function(responseBody) {
-            const jsonBody = JSON.parse(responseBody);
-            callback({ latitude: jsonBody.result.latitude, longitude: jsonBody.result.longitude });
-        });
+    async getLocationForPostCode(postcode) {
+           
+        this.makeGetRequest(POSTCODES_BASE_URL, `postcodes/${postcode}`, [])
+            .then((body)=> {
+                const out = JSON.parse(body)
+                console.log('request successful')
+                return {latitude: out.result.latitude, longitude: out.result.longitude}
+            })
+            .catch((err)=> console.log('Error while getting locatsssssion', err))
     }
-
+        
     getNearestStopPoints(latitude, longitude, count, callback) {
         this.makeGetRequest(
             TFL_BASE_URL,
@@ -75,15 +82,18 @@ export default class ConsoleRunner {
         );
     }
 
-    run() {
+    async run() {
         const that = this;
-        that.promptForPostcode(function(postcode) {
-            postcode = postcode.replace(/\s/g, '');
-            that.getLocationForPostCode(postcode, function(location) {
-                that.getNearestStopPoints(location.latitude, location.longitude, 5, function(stopPoints) {
-                    that.displayStopPoints(stopPoints);
-                });
-            });
-        });
+        that.promptForPostcode()
+        .then((postcode)=>postcode.replace(/\s/g, ''))
+        .then((postcode)=>that.getLocationForPostCode(postcode))
+
+            
+            // console.log(that.getLocationForPostCode(postcode))
+        //         that.getNearestStopPoints(location.latitude, location.longitude, 5, function(stopPoints) {
+        //             that.displayStopPoints(stopPoints);
+        //         });
+        //     });
+        // });
     }
 }
